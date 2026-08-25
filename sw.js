@@ -24,10 +24,10 @@ self.addEventListener('activate', (event) => {
 });
 
 // App shell (HTML/CSS/JS/ikonlar): önce cache, sonra ağ.
-// Claude API çağrıları (api.anthropic.com) her zaman ağdan gider, asla cache'lenmez.
+// Gemini API çağrıları (generativelanguage.googleapis.com) her zaman ağdan gider, asla cache'lenmez.
 self.addEventListener('fetch', (event) => {
   const url = event.request.url;
-  if (url.includes('api.anthropic.com')) {
+  if (url.includes('generativelanguage.googleapis.com')) {
     return; // API isteklerine dokunma
   }
   event.respondWith(
