@@ -44,6 +44,7 @@
 <div class="card">
   <label>0. Gemini API key'in</label>
   <input type="password" id="apiKeyInput" placeholder="AIza... ile başlayan key" />
+  <button id="testKeyBtn" class="secondary" style="margin-top:8px;">Bağlantıyı test et</button>
   <div class="progress" id="keyStatus"></div>
 </div>
 
@@ -113,6 +114,28 @@ if (savedKey) {
 apiKeyInput.addEventListener('input', () => {
   localStorage.setItem('gemini_api_key', apiKeyInput.value.trim());
   keyStatus.textContent = apiKeyInput.value.trim() ? 'Key kaydedildi (bu cihazda saklı).' : '';
+});
+
+document.getElementById('testKeyBtn').addEventListener('click', async () => {
+  const apiKey = apiKeyInput.value.trim();
+  if (!apiKey) { keyStatus.textContent = 'Önce key gir.'; return; }
+  keyStatus.textContent = 'Test ediliyor...';
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`);
+    const data = await res.json();
+    if (!res.ok) {
+      const msg = (data && data.error && data.error.message) ? data.error.message : `HTTP ${res.status}`;
+      keyStatus.textContent = `❌ Key/erişim hatası: ${msg}`;
+      log(`Bağlantı testi başarısız: ${msg}`);
+    } else {
+      const count = (data.models || []).length;
+      keyStatus.textContent = `✅ Bağlantı çalışıyor (${count} model görünür). Sorun görselle/ağla ilgili olabilir.`;
+      log(`Bağlantı testi başarılı, ${count} model listelendi.`);
+    }
+  } catch (e) {
+    keyStatus.textContent = `❌ Ağ hatası: ${e.message} — bu genelde CORS/ağ engeli veya key sorunu demek.`;
+    log(`Bağlantı testi ağ hatası: ${e.message}`);
+  }
 });
 
 fileInput.addEventListener('change', () => {
