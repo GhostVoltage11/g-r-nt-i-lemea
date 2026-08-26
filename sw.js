@@ -1,6 +1,7 @@
-const CACHE_NAME = 'pano-excel-v1';
+// Her guncellemede bu numarayi artirmana gerek yok, network-first stratejisi
+// sayesinde HTML/JS her zaman once agdan (guncel haliyle) cekilir.
+const CACHE_NAME = 'pano-excel-v3';
 const APP_SHELL = [
-  './index.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
@@ -23,13 +24,31 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// App shell (HTML/CSS/JS/ikonlar): önce cache, sonra ağ.
-// Gemini API çağrıları (generativelanguage.googleapis.com) her zaman ağdan gider, asla cache'lenmez.
 self.addEventListener('fetch', (event) => {
   const url = event.request.url;
+
+  // Gemini API cagrilarina asla dokunma, her zaman canli agdan gitsin.
   if (url.includes('generativelanguage.googleapis.com')) {
-    return; // API isteklerine dokunma
+    return;
   }
+
+  // HTML sayfasi (navigasyon) ve bu dosyanin kendisi: her zaman once agdan dene.
+  // Boylece GitHub'da yaptigin guncellemeler aninda yansir; ag yoksa cache'e dus.
+  const isHTML = event.request.mode === 'navigate' || url.endsWith('.html') || url.endsWith('/');
+  if (isHTML) {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-store' })
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone)).catch(() => {});
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Statik varliklar (ikonlar, kutuphaneler): once cache, sonra ag.
   event.respondWith(
     caches.match(event.request).then((cached) => {
       return cached || fetch(event.request).then((response) => {
