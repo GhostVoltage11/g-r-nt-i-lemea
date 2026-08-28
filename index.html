@@ -193,10 +193,12 @@ function resizeImageToBase64(file, maxDim = 1600, quality = 0.85) {
   });
 }
 
-async function extractFromImage(file, apiKey, attempt = 1) {
+const MODEL_CHAIN = ['gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-2.0-flash']; // meşgulse sırayla dener
+
+async function extractFromImage(file, apiKey, attempt = 1, modelIdx = 0) {
   const base64 = await resizeImageToBase64(file);
   const mediaType = 'image/jpeg'; // resizeImageToBase64 her zaman JPEG üretir
-  const model = 'gemini-flash-latest'; // Google'ın her zaman güncel Flash modeline işaret eden alias'ı
+  const model = MODEL_CHAIN[modelIdx];
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 sn zaman aşımı
@@ -234,16 +236,23 @@ async function extractFromImage(file, apiKey, attempt = 1) {
 
   const data = await response.json();
 
-  // Model geçici olarak yoğunsa (503/overloaded), birkaç kez otomatik tekrar dene.
+  // Model geçici olarak yoğunsa (503/overloaded) ya da rate-limit'e (429) takıldıysa:
+  // önce aynı modeli birkaç kez bekleyip dener, olmazsa sıradaki modele geçer.
+  const isRateLimited = !response.ok && response.status === 429;
   const isOverloaded = !response.ok && (
     response.status === 503 ||
     (data && data.error && /overloaded|unavailable/i.test(data.error.status || data.error.message || ''))
   );
-  if (isOverloaded && attempt < 4) {
-    const waitMs = attempt * 4000; // 4sn, 8sn, 12sn
-    log(`  Model yoğun, ${waitMs/1000} sn sonra tekrar denenecek (deneme ${attempt+1}/4)...`);
+
+  if ((isOverloaded || isRateLimited) && attempt < 6) {
+    const waitMs = Math.min(attempt * 5000, 25000); // 5,10,15,20,25 sn
+    log(`  ${model} meşgul/limitli, ${waitMs/1000} sn sonra tekrar denenecek (deneme ${attempt+1}/6)...`);
     await new Promise(r => setTimeout(r, waitMs));
-    return extractFromImage(file, apiKey, attempt + 1);
+    return extractFromImage(file, apiKey, attempt + 1, modelIdx);
+  }
+  if ((isOverloaded || isRateLimited) && modelIdx < MODEL_CHAIN.length - 1) {
+    log(`  ${model} hâlâ meşgul, sıradaki model deneniyor: ${MODEL_CHAIN[modelIdx + 1]}`);
+    return extractFromImage(file, apiKey, 1, modelIdx + 1);
   }
 
   if (!response.ok) {
@@ -292,7 +301,7 @@ processBtn.addEventListener('click', async () => {
   allRecords = [];
   logEl.textContent = '';
 
-  const CONCURRENCY = 5; // aynı anda kaç fotoğraf gönderilecek
+  const CONCURRENCY = 2; // ücretsiz katmanın dakikalık limiti düşük; fazla paralellik kendi rate-limit'ini tetikliyor
   let done = 0;
   let nextIndex = 0;
 
