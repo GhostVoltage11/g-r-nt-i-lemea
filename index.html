@@ -201,7 +201,7 @@ async function extractFromImage(file, apiKey, attempt = 1, modelIdx = 0) {
   const model = MODEL_CHAIN[modelIdx];
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 sn zaman aşımı
+  const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 sn zaman aşımı
 
   let response;
   try {
@@ -226,13 +226,24 @@ async function extractFromImage(file, apiKey, attempt = 1, modelIdx = 0) {
       }
     );
   } catch (err) {
-    if (err.name === 'AbortError') {
-      throw new Error('Zaman aşımı: 60 saniyede yanıt gelmedi (yavaş bağlantı olabilir, tekrar dene).');
+    clearTimeout(timeoutId);
+    const isTimeoutOrNetwork = err.name === 'AbortError' || err.message === 'Failed to fetch';
+    if (isTimeoutOrNetwork) {
+      if (attempt < 6) {
+        const waitMs = Math.min(attempt * 5000, 25000);
+        log(`  ${model} yanıt vermedi (zaman aşımı/ağ), ${waitMs/1000} sn sonra tekrar denenecek (deneme ${attempt+1}/6)...`);
+        await new Promise(r => setTimeout(r, waitMs));
+        return extractFromImage(file, apiKey, attempt + 1, modelIdx);
+      }
+      if (modelIdx < MODEL_CHAIN.length - 1) {
+        log(`  ${model} hâlâ yanıt vermiyor, sıradaki model deneniyor: ${MODEL_CHAIN[modelIdx + 1]}`);
+        return extractFromImage(file, apiKey, 1, modelIdx + 1);
+      }
+      throw new Error('Zaman aşımı: birkaç denemeden sonra yanıt gelmedi (yavaş/kararsız bağlantı olabilir).');
     }
     throw err;
-  } finally {
-    clearTimeout(timeoutId);
   }
+  clearTimeout(timeoutId);
 
   const data = await response.json();
 
