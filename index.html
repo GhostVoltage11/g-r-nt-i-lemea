@@ -90,13 +90,15 @@ Sayfada birden fazla pano/şalter kaydı olabilir; HER BİRİ İÇİN AYRI bir k
 Her kayıt için şu alanları çıkar (bilgi yoksa boş string "" bırak, uydurma):
 - bolum: sayfadaki bölüm/alan başlığı (örn. "Kazan Dairesi"). Sayfada böyle bir bölüm başlığı yoksa "" bırak.
 - isletme, lokasyon, pano_numarasi, sap_numarasi, sayfa_numarasi
-- pano_adi: SADECE panonun kendi adı/etiketi. Marka veya model kodunu ASLA pano_adi içine ekleme, onlar ayrı alanlara (marka, salter_sigorta_kodu) yazılacak.
+- pano_adi: SADECE panonun kendi adı/etiketi. Marka veya model kodunu ASLA pano_adi içine ekleme, onlar ayrı alanlara (marka, salter_sigorta_kodu) yazılacak. "P." kısaltmasını olduğu gibi yaz, "Panosu" olarak genişletmene gerek yok (bunu kod sonradan yapıyor).
 - marka
 - salter_sigorta_kodu: şalter/sigorta model kodu. EĞER not "bıçaklı sigorta" ise veya sadece bıçaklı sigortadan bahsediyorsa bu alanı boş "" bırak, bıçaklı sigortayla ilgili hiçbir bilgi yazma.
 - salter_akimi: SADECE SAYI yaz, birim ekleme (ör. "25A" değil "25" yaz).
 - kacak_akim_koruma: "Var", "Yok" ya da tür ise ("KAKR", "Toroid" vb.) onu yaz; bilgi yoksa "".
 - malzeme_kodu, anma_acma_kacak_akimi (SADECE SAYI, mA), kisa_devre_akimi (SADECE SAYI, birim ekleme, ör. "63A" değil "63"), kacak_akim_acma_suresi (SADECE SAYI, ms), kacak_akim_acma_akimi (SADECE SAYI, mA)
 - re_ohm: topraklama direnç değeri, SADECE SAYI yaz, "Ω" veya "ohm" ekleme (ör. "0.21Ω" değil "0.21" yaz).
+
+ÖNEMLİ - Sayıları asla atlama: Sayfada el yazısı, sık sık soluk veya küçük yazılmış TÜM sayıları (pano/sap/sayfa numaraları, akım değerleri, direnç değerleri) dikkatlice oku, boş bırakma. Özellikle bir başlığın yanında parantez içinde numara ARALIĞI veya listesi varsa (örn. "Kurutucular - Kompresör (1016-1017)"), bu, o başlık altındaki HER KAYIT için AYRI bir numara olduğu anlamına gelir: aralıktaki her sayı (1016, 1017, ...) için ayrı bir kayıt oluştur ve o sayıyı bağlama göre pano_numarasi veya sap_numarasi alanına yaz; tek bir kayıtta birleştirip atlama.
 
 ÖNEMLİ - "X ile aynı" notu: Bir kayıtta "Pano 2 ile aynı", "2062 Kalıp 1 ile aynı" gibi bir ibare varsa, bu alanları uydurmadan aynen şu formatta pano_adi alanına yaz: "AYNI:<referans edilen pano adı veya numarası>" (örn. "AYNI:Pano 2" veya "AYNI:2062 Kalıp 1 PLC Panosu"). Diğer alanları boş bırak; bu kayıtlar daha sonra ilgili panonun bilgileriyle otomatik dolduruluyor.
 
@@ -115,9 +117,26 @@ function stripUnit(val) {
 
 const UNIT_FIELDS = ["salter_akimi","anma_acma_kacak_akimi","kisa_devre_akimi","kacak_akim_acma_suresi","kacak_akim_acma_akimi","re_ohm"];
 
+// "P." kısaltmasını "Panosu" olarak genişletir (kelime sonunda veya nokta+boşluk/son ile).
+function expandPanoAbbrev(val) {
+  if (!val) return val;
+  let s = val.toString();
+  s = s.replace(/\bP\.(?=\s|$)/g, 'Panosu');
+  s = s.replace(/\bPan\.(?=\s|$)/gi, 'Panosu');
+  return s;
+}
+
+// Marka adını Türkçe kurallara göre tamamen büyük harfe çevirir (Siemens -> SIEMENS).
+function normalizeMarka(val) {
+  if (!val) return val;
+  return val.toString().trim().toLocaleUpperCase('tr-TR');
+}
+
 function cleanRecord(rec) {
   const out = { ...rec };
   UNIT_FIELDS.forEach(k => { out[k] = stripUnit(out[k]); });
+  out.pano_adi = expandPanoAbbrev(out.pano_adi);
+  out.marka = normalizeMarka(out.marka);
   return out;
 }
 

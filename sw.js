@@ -1,6 +1,6 @@
 // Her guncellemede bu numarayi artirmana gerek yok, network-first stratejisi
 // sayesinde HTML/JS her zaman once agdan (guncel haliyle) cekilir.
-const CACHE_NAME = 'pano-excel-v5';
+const CACHE_NAME = 'pano-excel-v6';
 const APP_SHELL = [
   './manifest.json',
   './icon-192.png',
