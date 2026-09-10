@@ -13,6 +13,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Pano Kayıtları → Excel Otomasyonu (Gemini)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <style>
   body { font-family: Arial, sans-serif; max-width: 900px; margin: 30px auto; padding: 0 16px; background:#f5f5f5; color:#222; }
   h1 { font-size: 20px; }
@@ -49,6 +50,12 @@
 </div>
 
 <div class="card">
+  <label>0b. Bu parti için İşletme / Lokasyon adı (opsiyonel, tüm kayıtlara uygulanır)</label>
+  <input type="text" id="isletmeInput" placeholder="Örn: 3. İşletme" style="margin-bottom:8px;" />
+  <input type="text" id="lokasyonInput" placeholder="Örn: Klasik Döküm Tezgahları Faz-2" />
+</div>
+
+<div class="card">
   <label>1. Pano/sayfa fotoğraflarını yükle (birden fazla seçebilirsin)</label>
   <input type="file" id="fileInput" accept="image/*" multiple capture="environment" />
   <div id="thumbs"></div>
@@ -82,7 +89,9 @@ Sayfada birden fazla pano/şalter kaydı olabilir; HER BİRİ İÇİN AYRI bir k
 
 Her kayıt için şu alanları çıkar (bilgi yoksa boş string "" bırak, uydurma):
 - bolum: sayfadaki bölüm/alan başlığı (örn. "Kazan Dairesi"). Sayfada böyle bir bölüm başlığı yoksa "" bırak.
-- isletme, lokasyon, pano_numarasi, sap_numarasi, sayfa_numarasi, pano_adi, marka
+- isletme, lokasyon, pano_numarasi, sap_numarasi, sayfa_numarasi
+- pano_adi: SADECE panonun kendi adı/etiketi. Marka veya model kodunu ASLA pano_adi içine ekleme, onlar ayrı alanlara (marka, salter_sigorta_kodu) yazılacak.
+- marka
 - salter_sigorta_kodu: şalter/sigorta model kodu. EĞER not "bıçaklı sigorta" ise veya sadece bıçaklı sigortadan bahsediyorsa bu alanı boş "" bırak, bıçaklı sigortayla ilgili hiçbir bilgi yazma.
 - salter_akimi: SADECE SAYI yaz, birim ekleme (ör. "25A" değil "25" yaz).
 - kacak_akim_koruma: "Var", "Yok" ya da tür ise ("KAKR", "Toroid" vb.) onu yaz; bilgi yoksa "".
@@ -142,6 +151,46 @@ function resolveSameAsReferences(records) {
   });
 }
 
+// Kullanıcının girdiği İşletme/Lokasyon değerini, alanı boş olan kayıtlara uygular.
+function applyDefaults(records) {
+  const isletmeVal = isletmeInput.value.trim();
+  const lokasyonVal = lokasyonInput.value.trim();
+  return records.map(r => ({
+    ...r,
+    isletme: r.isletme || isletmeVal,
+    lokasyon: r.lokasyon || lokasyonVal
+  }));
+}
+
+// Pano Numarası boş olan kayıtlara, mevcut en büyük sayısal numaradan devam
+// ederek sırayla numara verir (referans dosyadaki gibi 1,2,3...).
+function autoNumberPanos(records) {
+  let maxNum = 0;
+  records.forEach(r => {
+    const n = parseInt(r.pano_numarasi, 10);
+    if (!isNaN(n) && n > maxNum) maxNum = n;
+  });
+  return records.map(r => {
+    if (r.pano_numarasi && r.pano_numarasi.toString().trim()) return r;
+    maxNum += 1;
+    return { ...r, pano_numarasi: maxNum.toString() };
+  });
+}
+
+// Referans dosyadaki gibi: aynı grup içinde ardışık aynı İşletme/Lokasyon
+// değerleri sadece grubun ilk satırında gösterilir, sonrakiler boş bırakılır.
+function collapseRepeatedGroups(records, key) {
+  let last = null;
+  return records.map(r => {
+    const val = (r[key] || '').toString();
+    if (val && val === last) {
+      return { ...r, [key]: '' };
+    }
+    if (val) last = val;
+    return r;
+  });
+}
+
 let files = [];
 let allRecords = [];
 
@@ -156,6 +205,8 @@ const resultTable = document.getElementById('resultTable');
 const recCount = document.getElementById('recCount');
 const apiKeyInput = document.getElementById('apiKeyInput');
 const keyStatus = document.getElementById('keyStatus');
+const isletmeInput = document.getElementById('isletmeInput');
+const lokasyonInput = document.getElementById('lokasyonInput');
 
 function log(msg) {
   logEl.textContent += msg + "\n";
@@ -395,6 +446,8 @@ processBtn.addEventListener('click', async () => {
   await Promise.all(Array.from({ length: workerCount }, () => worker()));
 
   allRecords = resolveSameAsReferences(allRecords);
+  allRecords = applyDefaults(allRecords);
+  allRecords = autoNumberPanos(allRecords);
   renderTable();
 
   progressEl.textContent = `Tamamlandı. Toplam ${allRecords.length} kayıt.`;
@@ -403,14 +456,45 @@ processBtn.addEventListener('click', async () => {
   downloadBtn.disabled = allRecords.length === 0;
 });
 
-downloadBtn.addEventListener('click', () => {
-  const wsData = [HEADERS, ...allRecords.map(rec => FIELD_KEYS.map(k => rec[k] || ''))];
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws['!cols'] = [14,12,16,12,12,12,34,14,20,12,16,14,16,12,16,16,10].map(w => ({ wch: w }));
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Pano Kayıtları");
-  XLSX.writeFile(wb, "pano_kayitlari_otomatik.xlsx");
-  log('Excel dosyası indirildi: pano_kayitlari_otomatik.xlsx');
+const COL_WIDTHS = [14,12,16,12,12,12,34,14,20,12,16,14,16,12,16,16,10];
+
+downloadBtn.addEventListener('click', async () => {
+  // Sadece indirilecek dosya için: aynı İşletme/Lokasyon tekrarlarını referans
+  // dosyadaki gibi grubun ilk satırında bırakıp sonrakileri boşaltıyoruz.
+  let exportRecords = collapseRepeatedGroups(allRecords, 'isletme');
+  exportRecords = collapseRepeatedGroups(exportRecords, 'lokasyon');
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("Pano Kayıtları");
+  ws.columns = HEADERS.map((h, i) => ({ header: h, key: FIELD_KEYS[i], width: COL_WIDTHS[i] }));
+
+  exportRecords.forEach(rec => {
+    ws.addRow(FIELD_KEYS.map(k => rec[k] || ''));
+  });
+
+  const thinBorder = { style: 'thin', color: { argb: 'FF999999' } };
+  ws.eachRow((row, rowNumber) => {
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      cell.border = { top: thinBorder, left: thinBorder, bottom: thinBorder, right: thinBorder };
+      cell.alignment = { vertical: 'middle', wrapText: rowNumber === 1 };
+      if (rowNumber === 1) {
+        cell.font = { bold: true, size: 12 };
+      }
+    });
+  });
+  ws.views = [{ state: 'frozen', ySplit: 1 }];
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'pano_kayitlari_otomatik.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  log('Excel dosyası indirildi: pano_kayitlari_otomatik.xlsx (kalın başlık + kenarlıklarla, referans formata uygun)');
 });
 
 if ('serviceWorker' in navigator) {

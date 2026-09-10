@@ -1,11 +1,12 @@
 // Her guncellemede bu numarayi artirmana gerek yok, network-first stratejisi
 // sayesinde HTML/JS her zaman once agdan (guncel haliyle) cekilir.
-const CACHE_NAME = 'pano-excel-v4';
+const CACHE_NAME = 'pano-excel-v5';
 const APP_SHELL = [
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
-  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js'
 ];
 
 self.addEventListener('install', (event) => {
