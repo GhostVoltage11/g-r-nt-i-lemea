@@ -97,13 +97,24 @@ Her kayıt için şu alanları çıkar (bilgi yoksa boş string "" bırak, uydur
 - kacak_akim_koruma: "Var", "Yok" ya da tür ise ("KAKR", "Toroid" vb.) onu yaz; bilgi yoksa "".
 - malzeme_kodu, anma_acma_kacak_akimi (SADECE SAYI, mA), kisa_devre_akimi (SADECE SAYI, birim ekleme, ör. "63A" değil "63"), kacak_akim_acma_suresi (SADECE SAYI, ms), kacak_akim_acma_akimi (SADECE SAYI, mA)
 - re_ohm: topraklama direnç değeri, SADECE SAYI yaz, "Ω" veya "ohm" ekleme (ör. "0.21Ω" değil "0.21" yaz).
+- referans_pano: SADECE "kısmi aynı" durumunda doldurulur (aşağıdaki açıklamaya bak), diğer tüm durumlarda "" bırak.
 
 ÖNEMLİ - Sayıları asla atlama: Sayfada el yazısı, sık sık soluk veya küçük yazılmış TÜM sayıları (pano/sap/sayfa numaraları, akım değerleri, direnç değerleri) dikkatlice oku, boş bırakma. Özellikle bir başlığın yanında parantez içinde numara ARALIĞI veya listesi varsa (örn. "Kurutucular - Kompresör (1016-1017)"), bu, o başlık altındaki HER KAYIT için AYRI bir numara olduğu anlamına gelir: aralıktaki her sayı (1016, 1017, ...) için ayrı bir kayıt oluştur ve o sayıyı bağlama göre pano_numarasi veya sap_numarasi alanına yaz; tek bir kayıtta birleştirip atlama.
 
-ÖNEMLİ - "X ile aynı" notu: Bir kayıtta "Pano 2 ile aynı", "2062 Kalıp 1 ile aynı" gibi bir ibare varsa, bu alanları uydurmadan aynen şu formatta pano_adi alanına yaz: "AYNI:<referans edilen pano adı veya numarası>" (örn. "AYNI:Pano 2" veya "AYNI:2062 Kalıp 1 PLC Panosu"). Diğer alanları boş bırak; bu kayıtlar daha sonra ilgili panonun bilgileriyle otomatik dolduruluyor.
+ÖNEMLİ - Üzeri çizili/karalanmış notlar: Bir kayıt çarpı (X) ile iptal edilmişse veya üzeri tamamen çizilmişse, o kaydı ASLA çıktıya dahil etme; sadece iptal edilmemiş/geçerli son hali kullan.
+
+ÖNEMLİ - Fotoğraf yönü: Fotoğraf yan yatık (90/180 derece döndürülmüş) olabilir; metni yönüne bakmaksızın dikkatlice oku ve yatay çizgilerle ayrılmış HER pano bloğunu çıkar, hiçbirini atlama.
+
+ÖNEMLİ - Aynı kaydı iki kez yazma: Bir pano bloğunu sadece BİR KERE çıktıya ekle; aynı pano numarası/adı için tekrarlı satır oluşturma.
+
+ÖNEMLİ - Sayfa numarası: genelde sayfanın alt köşesinde daire içine alınmış 1-2 haneli küçük bir sayıdır (örn. 45, 46, 47). 3 haneli bir sayı okuduysan muhtemelen yanlış okumuşsundur; tekrar dikkatle bak ve sadece dairenin içindeki rakamı yaz, başka hiçbir rakamla birleştirme. Sayfadaki TÜM kayıtlara aynı sayfa numarasını uygula.
+
+ÖNEMLİ - Kısmi "X ile aynı" notu: Bir kayıtta "607 ile aynı", "617 ile aynı" gibi bir ibare varsa AMA o kayıtta ayrıca kendine özel ölçülmüş değerler de varsa (örn. "608 nolu Tezgah PLC P. 607 ile aynı 0,29Ω-7,0ms 21mA" gibi), bu TAM AYNI değildir: panonun kendi pano_adi, pano_numarasi ve kendine özel ölçülen değerlerini (re_ohm, kisa_devre_akimi, kacak_akim_acma_suresi, kacak_akim_acma_akimi) NORMAL ŞEKİLDE ayrı ayrı çıkar; SADECE "aynı" denilen referans panonun numarasını/adını ayrıca referans_pano alanına yaz (örn. "607"). marka, salter_sigorta_kodu, salter_akimi, kacak_akim_koruma, malzeme_kodu, anma_acma_kacak_akimi alanlarını bu durumda boş "" bırak (kod bunları referans panodan otomatik dolduracak).
+
+ÖNEMLİ - "X ile aynı" TÜM kayıt için geçerliyse (kendine ait hiçbir ek ölçüm/detay yazılmamışsa, sadece "Pano 2 ile aynı" gibi tek başına bir ibare varsa), bu alanları uydurmadan aynen şu formatta pano_adi alanına yaz: "AYNI:<referans edilen pano adı veya numarası>" (örn. "AYNI:Pano 2" veya "AYNI:2062 Kalıp 1 PLC Panosu"). Diğer alanları boş bırak; bu kayıtlar daha sonra ilgili panonun bilgileriyle otomatik dolduruluyor.
 
 SADECE geçerli bir JSON listesi döndür, başka hiçbir açıklama/metin/markdown fence ekleme:
-[{"isletme": "...", "lokasyon": "...", "pano_numarasi": "...", "sap_numarasi": "...", "sayfa_numarasi": "...", "pano_adi": "...", "marka": "...", "salter_sigorta_kodu": "...", "salter_akimi": "...", "kacak_akim_koruma": "...", "malzeme_kodu": "...", "anma_acma_kacak_akimi": "...", "kisa_devre_akimi": "...", "kacak_akim_acma_suresi": "...", "kacak_akim_acma_akimi": "...", "re_ohm": "..."}]`;
+[{"isletme": "...", "lokasyon": "...", "pano_numarasi": "...", "sap_numarasi": "...", "sayfa_numarasi": "...", "pano_adi": "...", "marka": "...", "salter_sigorta_kodu": "...", "salter_akimi": "...", "kacak_akim_koruma": "...", "malzeme_kodu": "...", "anma_acma_kacak_akimi": "...", "kisa_devre_akimi": "...", "kacak_akim_acma_suresi": "...", "kacak_akim_acma_akimi": "...", "re_ohm": "...", "referans_pano": "..."}]`;
 
 // Değer içinden birimleri (A, mA, ms, Ω/ohm) temizleyip sadece sayısal kısmı bırakır.
 // Model talimata uymazsa ikinci bir güvence katmanı olarak kullanılır.
@@ -159,15 +170,54 @@ function resolveSameAsReferences(records) {
       log(`UYARI: "${m[1]}" için eşleşen pano bulunamadı, kayıt referans metniyle bırakıldı.`);
       return rec;
     }
-    // Kendi kimlik bilgilerini (bölüm/işletme/lokasyon/pano no/sap no/sayfa no) koru,
-    // geri kalan teknik alanları eşleşen panodan kopyala.
-    const copied = { ...match };
+    // Kendi kimlik bilgilerini (işletme/lokasyon/pano no/sap no/sayfa no) koru,
+    // geri kalan teknik alanları eşleşen panodan kopyala (kendi değeri varsa onu koru).
+    const copied = { ...match, ...rec };
     ["isletme","lokasyon","pano_numarasi","sap_numarasi","sayfa_numarasi"].forEach(k => {
       copied[k] = rec[k] || match[k] || '';
     });
+    FIELD_KEYS.forEach(k => { if (!copied[k]) copied[k] = match[k] || ''; });
     copied.pano_adi = match.pano_adi;
     return copied;
   });
+}
+
+// "referans_pano" alanı dolu olan (kısmi aynı - örn. "608, 607 ile aynı ama
+// kendi ölçüm değerleri farklı") kayıtları, SADECE marka/şalter/kaçak akım
+// koruma gibi kimlik bilgilerini referans panodan kopyalayarak doldurur;
+// kendi ölçülmüş değerlerine (Re, açma süresi/akımı, kısa devre akımı) dokunmaz.
+const COPY_FROM_REF_FIELDS = ["marka","salter_sigorta_kodu","salter_akimi","kacak_akim_koruma","malzeme_kodu","anma_acma_kacak_akimi"];
+function resolvePartialSameAs(records) {
+  const norm = (s) => (s || '').toString().toLowerCase().replace(/[^a-z0-9ığüşöç]/gi, '');
+  return records.map(rec => {
+    const refText = (rec.referans_pano || '').toString().trim();
+    if (!refText) return rec;
+    const ref = norm(refText);
+    const match = records.find(r => r !== rec && !r.referans_pano && (
+      norm(r.pano_numarasi) === ref || norm(r.sap_numarasi) === ref || norm(r.pano_adi).includes(ref)
+    ));
+    if (!match) {
+      log(`UYARI: "${refText}" referans panosu bulunamadı (pano ${rec.pano_numarasi || '?'}).`);
+      return rec;
+    }
+    const out = { ...rec };
+    COPY_FROM_REF_FIELDS.forEach(k => { if (!out[k]) out[k] = match[k] || ''; });
+    return out;
+  });
+}
+
+// Aynı fotoğraftan (veya farklı fotoğraflardan) yanlışlıkla iki kez çıkarılmış,
+// tüm alanları birebir aynı olan kayıtları teke indirir.
+function dedupeRecords(records) {
+  const seen = new Set();
+  const out = [];
+  records.forEach(r => {
+    const sig = FIELD_KEYS.map(k => (r[k] || '').toString().trim().toLowerCase()).join('|');
+    if (seen.has(sig)) return;
+    seen.add(sig);
+    out.push(r);
+  });
+  return out;
 }
 
 // Kullanıcının girdiği İşletme/Lokasyon değerini, alanı boş olan kayıtlara uygular.
@@ -464,7 +514,9 @@ processBtn.addEventListener('click', async () => {
   const workerCount = Math.min(CONCURRENCY, files.length);
   await Promise.all(Array.from({ length: workerCount }, () => worker()));
 
+  allRecords = dedupeRecords(allRecords);
   allRecords = resolveSameAsReferences(allRecords);
+  allRecords = resolvePartialSameAs(allRecords);
   allRecords = applyDefaults(allRecords);
   allRecords = autoNumberPanos(allRecords);
   renderTable();
