@@ -80,15 +80,15 @@
 </div>
 
 <script>
-// Çıktı formatı "Topraklama Ölçümü Pano Listesi" örnek dosyasıyla birebir uyumlu.
-const HEADERS = ["Bölüm","İşletme","Lokasyon","Pano Numarası","Sap Numarası","Sayfa Numarası","Pano Adı","Marka","Şalter/Sigorta Kodu","Şalter Akımı","Kaçak Akım Koruma","Malzeme Kodu","Anma Açma Kaçak Akımı (mA)","Kısa Devre Akımı","Kaçak Akım Açma Süresi (ms)","Kaçak Akım Açma Akımı (mA)","Re (Ω)"];
-const FIELD_KEYS = ["bolum","isletme","lokasyon","pano_numarasi","sap_numarasi","sayfa_numarasi","pano_adi","marka","salter_sigorta_kodu","salter_akimi","kacak_akim_koruma","malzeme_kodu","anma_acma_kacak_akimi","kisa_devre_akimi","kacak_akim_acma_suresi","kacak_akim_acma_akimi","re_ohm"];
+// Çıktı formatı "Topraklama Ölçümü Pano Listesi" örnek dosyasıyla birebir uyumlu
+// (Bölüm sütunu yok; veriler B sütunu / 3. satırdan başlar - bkz. downloadBtn).
+const HEADERS = ["İşletme","Lokasyon","Pano Numarası","Sap Numarası","Sayfa Numarası","Pano Adı","Marka","Şalter/Sigorta Kodu","Şalter Akımı","Kaçak Akım Koruma","Malzeme Kodu","Anma açma kaçak akımı(mA)","Kısa Devre Akımı (A)","Kaçak Akım Açma Süresi (ms)","Kaçak Akım Açma Akımı (mA)","Re (Ω)"];
+const FIELD_KEYS = ["isletme","lokasyon","pano_numarasi","sap_numarasi","sayfa_numarasi","pano_adi","marka","salter_sigorta_kodu","salter_akimi","kacak_akim_koruma","malzeme_kodu","anma_acma_kacak_akimi","kisa_devre_akimi","kacak_akim_acma_suresi","kacak_akim_acma_akimi","re_ohm"];
 
 const PROMPT = `Bu, elektrik pano kayıt defterinden bir sayfanın fotoğrafıdır (el yazısı Türkçe notlar).
 Sayfada birden fazla pano/şalter kaydı olabilir; HER BİRİ İÇİN AYRI bir kayıt (satır) oluştur.
 
 Her kayıt için şu alanları çıkar (bilgi yoksa boş string "" bırak, uydurma):
-- bolum: sayfadaki bölüm/alan başlığı (örn. "Kazan Dairesi"). Sayfada böyle bir bölüm başlığı yoksa "" bırak.
 - isletme, lokasyon, pano_numarasi, sap_numarasi, sayfa_numarasi
 - pano_adi: SADECE panonun kendi adı/etiketi. Marka veya model kodunu ASLA pano_adi içine ekleme, onlar ayrı alanlara (marka, salter_sigorta_kodu) yazılacak. "P." kısaltmasını olduğu gibi yaz, "Panosu" olarak genişletmene gerek yok (bunu kod sonradan yapıyor).
 - marka
@@ -103,7 +103,7 @@ Her kayıt için şu alanları çıkar (bilgi yoksa boş string "" bırak, uydur
 ÖNEMLİ - "X ile aynı" notu: Bir kayıtta "Pano 2 ile aynı", "2062 Kalıp 1 ile aynı" gibi bir ibare varsa, bu alanları uydurmadan aynen şu formatta pano_adi alanına yaz: "AYNI:<referans edilen pano adı veya numarası>" (örn. "AYNI:Pano 2" veya "AYNI:2062 Kalıp 1 PLC Panosu"). Diğer alanları boş bırak; bu kayıtlar daha sonra ilgili panonun bilgileriyle otomatik dolduruluyor.
 
 SADECE geçerli bir JSON listesi döndür, başka hiçbir açıklama/metin/markdown fence ekleme:
-[{"bolum": "...", "isletme": "...", "lokasyon": "...", "pano_numarasi": "...", "sap_numarasi": "...", "sayfa_numarasi": "...", "pano_adi": "...", "marka": "...", "salter_sigorta_kodu": "...", "salter_akimi": "...", "kacak_akim_koruma": "...", "malzeme_kodu": "...", "anma_acma_kacak_akimi": "...", "kisa_devre_akimi": "...", "kacak_akim_acma_suresi": "...", "kacak_akim_acma_akimi": "...", "re_ohm": "..."}]`;
+[{"isletme": "...", "lokasyon": "...", "pano_numarasi": "...", "sap_numarasi": "...", "sayfa_numarasi": "...", "pano_adi": "...", "marka": "...", "salter_sigorta_kodu": "...", "salter_akimi": "...", "kacak_akim_koruma": "...", "malzeme_kodu": "...", "anma_acma_kacak_akimi": "...", "kisa_devre_akimi": "...", "kacak_akim_acma_suresi": "...", "kacak_akim_acma_akimi": "...", "re_ohm": "..."}]`;
 
 // Değer içinden birimleri (A, mA, ms, Ω/ohm) temizleyip sadece sayısal kısmı bırakır.
 // Model talimata uymazsa ikinci bir güvence katmanı olarak kullanılır.
@@ -162,7 +162,7 @@ function resolveSameAsReferences(records) {
     // Kendi kimlik bilgilerini (bölüm/işletme/lokasyon/pano no/sap no/sayfa no) koru,
     // geri kalan teknik alanları eşleşen panodan kopyala.
     const copied = { ...match };
-    ["bolum","isletme","lokasyon","pano_numarasi","sap_numarasi","sayfa_numarasi"].forEach(k => {
+    ["isletme","lokasyon","pano_numarasi","sap_numarasi","sayfa_numarasi"].forEach(k => {
       copied[k] = rec[k] || match[k] || '';
     });
     copied.pano_adi = match.pano_adi;
@@ -475,7 +475,15 @@ processBtn.addEventListener('click', async () => {
   downloadBtn.disabled = allRecords.length === 0;
 });
 
-const COL_WIDTHS = [14,12,16,12,12,12,34,14,20,12,16,14,16,12,16,16,10];
+// "Topraklama Ölçümü Pano Listesi" örnek dosyasındaki gerçek sütun genişlikleri
+// (B..Q sütunları; A sütunu dar bir boşluk sütunu olarak ayrı tutulur).
+const COL_WIDTHS = [16.14,17.57,23.14,24,19.71,48.71,15.43,27.43,20.29,27.43,22.86,32.29,24,38.43,32.71,46.71];
+
+// Sayfa adı için Excel'in izin vermediği karakterleri temizler, 31 karakterle sınırlar.
+function sanitizeSheetName(name) {
+  const cleaned = (name || '').toString().replace(/[:\\\/\?\*\[\]]/g, ' ').trim();
+  return (cleaned || 'Pano Listesi').slice(0, 31);
+}
 
 downloadBtn.addEventListener('click', async () => {
   // Sadece indirilecek dosya için: aynı İşletme/Lokasyon tekrarlarını referans
@@ -484,24 +492,40 @@ downloadBtn.addEventListener('click', async () => {
   exportRecords = collapseRepeatedGroups(exportRecords, 'lokasyon');
 
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet("Pano Kayıtları");
-  ws.columns = HEADERS.map((h, i) => ({ header: h, key: FIELD_KEYS[i], width: COL_WIDTHS[i] }));
+  const sheetName = sanitizeSheetName(isletmeInput.value.trim());
+  const ws = wb.addWorksheet(sheetName);
 
-  exportRecords.forEach(rec => {
-    ws.addRow(FIELD_KEYS.map(k => rec[k] || ''));
+  // A sütunu: dar boşluk sütunu (Topraklama dosyasındaki gibi). Veri B..Q arası.
+  ws.getColumn(1).width = 5.43;
+  HEADERS.forEach((h, i) => { ws.getColumn(i + 2).width = COL_WIDTHS[i]; });
+
+  // 1. ve 2. satırlar boş bırakılıyor, başlıklar 3. satırda, veriler 4. satırdan başlıyor.
+  const HEADER_ROW = 3;
+  const FIRST_DATA_ROW = 4;
+
+  const headerRow = ws.getRow(HEADER_ROW);
+  HEADERS.forEach((h, i) => { headerRow.getCell(i + 2).value = h; });
+
+  exportRecords.forEach((rec, idx) => {
+    const row = ws.getRow(FIRST_DATA_ROW + idx);
+    FIELD_KEYS.forEach((k, i) => { row.getCell(i + 2).value = rec[k] || ''; });
   });
 
   const thinBorder = { style: 'thin', color: { argb: 'FF999999' } };
-  ws.eachRow((row, rowNumber) => {
-    row.eachCell({ includeEmpty: true }, (cell) => {
+  const lastDataRow = FIRST_DATA_ROW + exportRecords.length - 1;
+  for (let r = HEADER_ROW; r <= lastDataRow; r++) {
+    const row = ws.getRow(r);
+    for (let c = 2; c <= 1 + HEADERS.length; c++) {
+      const cell = row.getCell(c);
       cell.border = { top: thinBorder, left: thinBorder, bottom: thinBorder, right: thinBorder };
-      cell.alignment = { vertical: 'middle', wrapText: rowNumber === 1 };
-      if (rowNumber === 1) {
+      cell.alignment = { vertical: 'middle', wrapText: r === HEADER_ROW };
+      if (r === HEADER_ROW) {
         cell.font = { bold: true, size: 12 };
       }
-    });
-  });
-  ws.views = [{ state: 'frozen', ySplit: 1 }];
+    }
+    row.commit();
+  }
+  ws.views = [{ state: 'frozen', ySplit: HEADER_ROW }];
 
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -513,7 +537,7 @@ downloadBtn.addEventListener('click', async () => {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
-  log('Excel dosyası indirildi: pano_kayitlari_otomatik.xlsx (kalın başlık + kenarlıklarla, referans formata uygun)');
+  log('Excel dosyası indirildi: pano_kayitlari_otomatik.xlsx (Topraklama Ölçümü Pano Listesi formatına uygun: B3\'ten başlayan başlıklar, veriler B4\'ten itibaren)');
 });
 
 if ('serviceWorker' in navigator) {
