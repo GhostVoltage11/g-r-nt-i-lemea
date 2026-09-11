@@ -143,6 +143,20 @@ function normalizeMarka(val) {
   return val.toString().trim().toLocaleUpperCase('tr-TR');
 }
 
+// Pano numarasını, adında zaten geçmiyorsa "<numara> nolu ..." şeklinde pano_adi başına ekler.
+// Böylece hem pano_numarasi sütununda hem de pano_adi metninde numara görünür.
+function prependPanoNumaraToAdi(rec) {
+  const num = (rec.pano_numarasi || '').toString().trim();
+  let adi = (rec.pano_adi || '').toString().trim();
+  if (!num || !adi) return rec;
+  // Model bazen numarayı atlayıp sadece "nolu ..." yazabiliyor; başta yalnız kalmış "nolu" varsa temizle.
+  adi = adi.replace(/^nolu\s+/i, '');
+  // Numara zaten adın içinde geçiyorsa (örn. "617 nolu Tezgah PLC Panosu" veya "2062 Kalıp 1 PLC Panosu") tekrar ekleme.
+  const numRe = new RegExp('(^|[^0-9])' + num.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^0-9]|$)');
+  if (numRe.test(adi)) return { ...rec, pano_adi: adi };
+  return { ...rec, pano_adi: `${num} nolu ${adi}` };
+}
+
 function cleanRecord(rec) {
   const out = { ...rec };
   UNIT_FIELDS.forEach(k => { out[k] = stripUnit(out[k]); });
@@ -519,6 +533,7 @@ processBtn.addEventListener('click', async () => {
   allRecords = resolvePartialSameAs(allRecords);
   allRecords = applyDefaults(allRecords);
   allRecords = autoNumberPanos(allRecords);
+  allRecords = allRecords.map(prependPanoNumaraToAdi);
   renderTable();
 
   progressEl.textContent = `Tamamlandı. Toplam ${allRecords.length} kayıt.`;
